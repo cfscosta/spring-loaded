@@ -293,7 +293,62 @@ public class Java8Tests extends SpringLoadedTests {
 		assertEquals("fooab", r.returnValue);
 	}
 
-	@Ignore
+
+    @Test
+    public void streamWithLambda() throws Exception {
+        String t = "basic.StreamA";
+        TypeRegistry typeRegistry = getTypeRegistry("basic..*");
+        byte[] sc = loadBytesForClass(t);
+        ReloadableType rtype = typeRegistry.addType(t, sc);
+
+        Class<?> simpleClass = rtype.getClazz();
+        Result r = runUnguarded(simpleClass, "run");
+        assertEquals(3, r.returnValue);
+
+        byte[] renamed = retrieveRename(t, t + "2", t + "2$Foo:" + t + "$Foo");
+        rtype.loadNewVersion("002", renamed);
+        r = runUnguarded(simpleClass, "run");
+        assertEquals(4, r.returnValue);
+    }
+
+    @Test
+    public void streamWithLambdaInvokedVirtually() throws Exception {
+        String t = "basic.StreamB";
+        TypeRegistry typeRegistry = getTypeRegistry("basic..*");
+        byte[] sc = loadBytesForClass(t);
+        ReloadableType rtype = typeRegistry.addType(t, sc);
+
+        Class<?> simpleClass = rtype.getClazz();
+        Result r = runUnguarded(simpleClass, "run");
+        assertEquals(3, r.returnValue);
+
+        byte[] renamed = retrieveRename(t, t + "2", t + "2$Foo:" + t + "$Foo");
+        rtype.loadNewVersion("002", renamed);
+        r = runUnguarded(simpleClass, "run");
+        assertEquals(4, r.returnValue);
+    }
+
+    @Test
+    public void streamWithoutLambda() throws Exception {
+        String t = "basic.StreamC";
+        TypeRegistry typeRegistry = getTypeRegistry("basic..*");
+        byte[] sc = loadBytesForClass(t);
+        ReloadableType rtype = typeRegistry.addType(t, sc);
+
+        Class<?> simpleClass = rtype.getClazz();
+        Result r = runUnguarded(simpleClass, "run");
+        assertEquals(3, r.returnValue);
+
+        byte[] renamed = retrieveRename(t, t + "2");
+        rtype.loadNewVersion("002", renamed);
+        r = runUnguarded(simpleClass, "run");
+        assertEquals(4, r.returnValue);
+    }
+
+
+
+
+    @Ignore
 	@Test
 	public void lambdaWithVirtualMethodUse() throws Exception {
 		// not yet written
