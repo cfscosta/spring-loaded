@@ -119,9 +119,14 @@ public class Java8 {
 
         // Use bsmArgs to build the parameters 
         MethodType samMethodType = MethodType.fromMethodDescriptorString((((Type) bsmArgs[0]).getDescriptor()), callerLoader);
-
+        String execClassName = executorClass.getName();
         Handle bsmArgsHandle = (Handle) bsmArgs[1];
+        Class<?> lookupClass = caller.lookupClass();
         String owner = bsmArgsHandle.getOwner();
+        if (!execClassName.startsWith(owner.replace('/', '.')) && bsmArgsHandle.getTag() != Opcodes.H_INVOKEINTERFACE) {
+            executorClass = null;
+            lookupClass = Class.forName(owner.replace('/', '.'));
+        }
         String name = bsmArgsHandle.getName();
         String descriptor = bsmArgsHandle.getDesc();
         MethodType implMethodType = MethodType.fromMethodDescriptorString(descriptor, callerLoader);
@@ -130,18 +135,22 @@ public class Java8 {
         MethodHandle implMethod = null;
         switch (bsmArgsHandle.getTag()) {
         case Opcodes.H_INVOKESTATIC:
-            implMethod = caller.findStatic(caller.lookupClass(), name, implMethodType);
+            implMethod = caller.in(lookupClass).findStatic(lookupClass, name, implMethodType);
             break;
         case Opcodes.H_INVOKESPECIAL:
             // If there is an executor, the lambda function is actually modified from 'private instance' to 'public static' so adjust lookup. The method 
             // will be static with a new leading parameter.
             if (executorClass == null) {
                 // TODO is final parameter here correct?
-                implMethod = caller.findSpecial(caller.lookupClass(), name, implMethodType, caller.lookupClass());
+                implMethod = caller.in(lookupClass).findSpecial(lookupClass, name, implMethodType, caller.lookupClass());
             } else {
                 implMethod =
-                        caller.findStatic(caller.lookupClass(), name,
-                                MethodType.fromMethodDescriptorString("(L" + owner + ";" + descriptor.substring(1), callerLoader));
+                        caller.in(lookupClass)
+                                .findStatic(
+                                        lookupClass,
+                                        name,
+                                        MethodType.fromMethodDescriptorString("(L" + owner + ";" + descriptor.substring(1),
+                                                callerLoader));
             }
             break;
         case Opcodes.H_INVOKEVIRTUAL:
@@ -149,11 +158,15 @@ public class Java8 {
             // will be static with a new leading parameter.
             if (executorClass == null) {
                 // TODO when can this scenario occur? Aren't we only here if reloading has happened?
-                implMethod = caller.findVirtual(caller.lookupClass(), name, implMethodType);
+                implMethod = caller.in(lookupClass).findVirtual(lookupClass, name, implMethodType);
             } else {
                 implMethod =
-                        caller.findStatic(caller.lookupClass(), name,
-                                MethodType.fromMethodDescriptorString("(L" + owner + ";" + descriptor.substring(1), callerLoader));
+                        caller.in(lookupClass)
+                                .findStatic(
+                                        lookupClass,
+                                        name,
+                                        MethodType.fromMethodDescriptorString("(L" + owner + ";" + descriptor.substring(1),
+                                                callerLoader));
             }
             break;
         case Opcodes.H_INVOKEINTERFACE:
